@@ -105,6 +105,28 @@
     transition: opacity 0.15s, transform 0.1s;
   }
   .time-now-btn:active { opacity: 0.75; transform: scale(0.95); }
+  .time-sep { font-size: 15px; color: var(--sub); flex-shrink: 0; font-weight: 700; }
+
+  /* ── 必須エラー ── */
+  .validation-error-box {
+    background: #fff0ee; border: 1.5px solid var(--danger);
+    border-radius: 12px; padding: 14px 16px; margin: 0 0 12px;
+    display: none;
+  }
+  .validation-error-box.show { display: block; }
+  .validation-error-title {
+    font-size: 14px; font-weight: 700; color: var(--danger);
+    margin-bottom: 8px; display: flex; align-items: center; gap: 6px;
+  }
+  .validation-error-list { list-style: none; padding: 0; margin: 0; }
+  .validation-error-list li {
+    font-size: 14px; color: var(--danger); padding: 3px 0;
+    padding-left: 14px; position: relative;
+  }
+  .validation-error-list li::before { content: '・'; position: absolute; left: 0; }
+  .field-error input, .field-error select, .field-error textarea {
+    border-bottom: 2px solid var(--danger) !important;
+  }
 
   /* ── CHECKLIST ── */
   .check-card { background: var(--card); border-radius: var(--radius); overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08); border: 1px solid var(--border); }
@@ -233,7 +255,7 @@
 
 <div class="scroll-body">
 
-  <!-- ── 基本情報：type=month ＋ ヘルパー氏名 1行 ── -->
+  <!-- ── 基本情報：type=month ＋ 利用者氏名 1行 ── -->
   <div class="section-label">基本情報</div>
   <div class="top-card">
     <div class="ym-block">
@@ -241,8 +263,8 @@
     </div>
     <div class="top-divider"></div>
     <div class="helper-block">
-      <label for="helperName">ヘルパー氏名</label>
-      <input type="text" id="helperName" placeholder="氏名を入力" autocomplete="name">
+      <label for="userName">利用者氏名</label>
+      <input type="text" id="userName" placeholder="氏名を入力" autocomplete="off" style="text-align:center;">
     </div>
   </div>
 
@@ -250,35 +272,30 @@
   <div class="section-label">活動情報</div>
   <div class="card">
     <div class="field-row">
-      <span class="field-label">利用者氏名</span>
-      <input class="field-input" type="text" id="userName" placeholder="氏名" autocomplete="off">
+      <span class="field-label">ヘルパー氏名</span>
+      <input class="field-input" type="text" id="helperName" placeholder="氏名" autocomplete="name" style="text-align:center;">
     </div>
     <div class="field-row">
-      <span class="field-label">活動日</span>
-      <select class="field-input" id="daySel" style="font-size:16px;font-weight:600;color:var(--accent);cursor:pointer;-webkit-appearance:none;"></select>
-      <span style="font-size:14px;color:var(--sub);flex-shrink:0;">日</span>
-      <span id="dowDisplay" style="font-size:14px;font-weight:700;min-width:24px;text-align:center;flex-shrink:0;"></span>
-    </div>
-    <div class="time-row">
-      <span class="field-label">開始時刻</span>
-      <input type="time" id="startTime" oninput="toggleNowBtn('startTime')">
-      <button class="time-now-btn" id="nowBtn-startTime" onclick="setNow('startTime')" type="button">今</button>
-    </div>
-    <div class="time-row">
-      <span class="field-label">終了時刻</span>
-      <input type="time" id="endTime" oninput="toggleNowBtn('endTime')">
-      <button class="time-now-btn" id="nowBtn-endTime" onclick="setNow('endTime')" type="button">今</button>
+      <span class="field-label">支援日時</span>
+      <select id="daySel" style="border:none;background:transparent;font-family:inherit;font-size:15px;font-weight:600;color:var(--accent);cursor:pointer;-webkit-appearance:none;outline:none;flex-shrink:0;"></select>
+      <span style="font-size:13px;color:var(--sub);flex-shrink:0;">日</span>
+      <span id="dowDisplay" style="font-size:13px;font-weight:700;flex-shrink:0;"></span>
+      <input type="time" id="startTime" oninput="toggleNowBtn('startTime')" style="border:none;background:transparent;font-family:inherit;font-size:15px;color:var(--ink);outline:none;flex-shrink:0;width:90px;">
+      <button class="time-now-btn" id="nowBtn-startTime" onclick="setNow('startTime')" type="button" style="height:32px;padding:0 10px;font-size:13px;">今</button>
+      <span class="time-sep">〜</span>
+      <input type="time" id="endTime" oninput="toggleNowBtn('endTime')" style="border:none;background:transparent;font-family:inherit;font-size:15px;color:var(--ink);outline:none;flex-shrink:0;width:90px;">
+      <button class="time-now-btn" id="nowBtn-endTime" onclick="setNow('endTime')" type="button" style="height:32px;padding:0 10px;font-size:13px;">今</button>
     </div>
     <div class="field-row">
       <span class="field-label">種別</span>
-      <select class="field-input" id="categorySelect" style="cursor:pointer;">
+      <select class="field-input" id="categorySelect" style="cursor:pointer;text-align:center;">
         <option value="個別支援型">１．個別支援型</option>
         <option value="グループ支援型">２．グループ支援型</option>
       </select>
     </div>
     <div class="field-row" style="border-bottom:none">
       <span class="field-label">支援費区分</span>
-      <select class="field-input" id="supportType" style="cursor:pointer;">
+      <select class="field-input" id="supportType" style="cursor:pointer;text-align:center;">
         <option>支援費派遣・同行</option>
         <option>支援費派遣</option>
         <option>同行</option>
@@ -363,6 +380,16 @@
   </div>
 
 </div><!-- /scroll-body -->
+
+<div class="scroll-body" style="padding-top:0;padding-bottom:0;max-width:500px;margin:0 auto;">
+  <div class="validation-error-box" id="validationErrorBox">
+    <div class="validation-error-title">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      以下の項目を入力してください
+    </div>
+    <ul class="validation-error-list" id="validationErrorList"></ul>
+  </div>
+</div>
 
 <div class="bottom-bar">
   <button class="btn btn-reset" onclick="resetForm()">リセット</button>
@@ -729,7 +756,7 @@ function drawForm(data) {
 
   var cy=50;
 
-  /* ══ 1. 基本情報：年月（左半分）　ヘルパー氏名（右半分） ══ */
+  /* ══ 1. 基本情報：年月（左半分）　利用者氏名（右半分） ══ */
   cy=sectionBar('基本情報',cy);
   var half=Math.floor(CW/2);
   var LW1=52,LW2=80;
@@ -739,9 +766,9 @@ function drawForm(data) {
   T(data.eraStr+' '+data.month+'月',ML+LW1+6,cy+RH/2,{s:11,w:'bold'});
   var hx=ML+half+4,hw=CW-half-4;
   R(hx,cy,LW2,RH,LBG);
-  T('ヘルパー氏名',hx+4,cy+RH/2,{s:9,w:'bold',c:LC});
+  T('利用者氏名',hx+4,cy+RH/2,{s:9,w:'bold',c:LC});
   R(hx+LW2,cy,hw-LW2,RH,VBG);
-  T(data.helperName||'',hx+LW2+6,cy+RH/2,{s:11,w:'bold'});
+  T(data.userName||'',hx+LW2+6,cy+RH/2,{s:11,w:'bold'});
   cy+=RH+GAP;
 
   /* ══ 2. 活動情報（ラベル行→値行） ══ */
@@ -750,7 +777,7 @@ function drawForm(data) {
   var colD=68,colU=110,colC=82,colT=110,colS=CW-colD-colU-colC-colT;
   // ラベル行
   R(ML,                     cy,colD,RH,LBG);T('活 動 日',   ML+colD/2,                    cy+RH/2,{s:9,w:'bold',c:LC,a:'center'});
-  R(ML+colD,                cy,colU,RH,LBG);T('利用者氏名', ML+colD+colU/2,               cy+RH/2,{s:9,w:'bold',c:LC,a:'center'});
+  R(ML+colD,                cy,colU,RH,LBG);T('ヘルパー氏名',ML+colD+colU/2,              cy+RH/2,{s:9,w:'bold',c:LC,a:'center'});
   R(ML+colD+colU,           cy,colC,RH,LBG);T('種 別',      ML+colD+colU+colC/2,          cy+RH/2,{s:9,w:'bold',c:LC,a:'center'});
   R(ML+colD+colU+colC,      cy,colT,RH,LBG);T('時 間 帯',   ML+colD+colU+colC+colT/2,     cy+RH/2,{s:9,w:'bold',c:LC,a:'center'});
   R(ML+colD+colU+colC+colT, cy,colS,RH,LBG);T('支援費区分', ML+colD+colU+colC+colT+colS/2,cy+RH/2,{s:8.5,w:'bold',c:LC,a:'center'});
@@ -758,9 +785,9 @@ function drawForm(data) {
   // 値行
   var dateVal=data.day?(data.day+'日（'+data.dow+'）'):'';
   var timeVal=(data.startTime||data.endTime)?((data.startTime||'--:--')+' ～ '+(data.endTime||'--:--')):'';
-  var userVal=data.userName?(data.userName+' 様'):'';
+  var helperVal=data.helperName?(data.helperName):'';
   R(ML,                     cy,colD,RH,VBG);T(dateVal,          ML+colD/2,                    cy+RH/2,{s:11,w:'bold',a:'center'});
-  R(ML+colD,                cy,colU,RH,VBG);T(userVal,          ML+colD+colU/2,               cy+RH/2,{s:10,w:'bold',a:'center'});
+  R(ML+colD,                cy,colU,RH,VBG);T(helperVal,        ML+colD+colU/2,               cy+RH/2,{s:10,w:'bold',a:'center'});
   R(ML+colD+colU,           cy,colC,RH,VBG);T(data.category||'',ML+colD+colU+colC/2,          cy+RH/2,{s:9.5,a:'center'});
   R(ML+colD+colU+colC,      cy,colT,RH,VBG);T(timeVal,          ML+colD+colU+colC+colT/2,     cy+RH/2,{s:9.5,a:'center'});
   R(ML+colD+colU+colC+colT, cy,colS,RH,VBG);T(data.supportType, ML+colD+colU+colC+colT+colS/2,cy+RH/2,{s:9,a:'center'});
@@ -915,8 +942,50 @@ async function makePdfBlob() {
   return pdf.output('blob');
 }
 
+// ── 必須バリデーション ──
+function validateForm() {
+  const checks = [
+    { id: 'helperName',      label: 'ヘルパー氏名',       type: 'text' },
+    { id: 'userName',        label: '利用者氏名',          type: 'text' },
+    { id: 'daySel',          label: '活動日',              type: 'select' },
+    { id: 'startTime',       label: '開始時刻',            type: 'text' },
+    { id: 'endTime',         label: '終了時刻',            type: 'text' },
+    { id: 'categorySelect',  label: '種別',                type: 'select' },
+    { id: 'supportType',     label: '支援費区分',          type: 'select' },
+    { id: 'notes',           label: '活動内容・特記事項',  type: 'text' },
+  ];
+
+  const errors = [];
+  checks.forEach(c => {
+    const el = document.getElementById(c.id);
+    if (!el) return;
+    const val = el.value ? el.value.trim() : '';
+    if (!val || val === '') {
+      errors.push(c.label);
+    }
+  });
+
+  const box  = document.getElementById('validationErrorBox');
+  const list = document.getElementById('validationErrorList');
+
+  if (errors.length > 0) {
+    list.innerHTML = errors.map(e => `<li>${e}</li>`).join('');
+    box.classList.add('show');
+    // エラーボックスまでスクロール
+    box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return false;
+  } else {
+    box.classList.remove('show');
+    return true;
+  }
+}
+
 // ── Modal ──
 async function openPreview() {
+  // 必須チェック
+  if (!validateForm()) return;
+
+  document.getElementById('validationErrorBox').classList.remove('show');
   document.getElementById('previewModal').classList.add('open');
   document.getElementById('loadingMsg').style.display = 'block';
   document.getElementById('previewCanvas').style.display = 'none';
@@ -984,7 +1053,7 @@ document.getElementById('previewModal').addEventListener('click', e => {
 
 // ── Reset ──
 function resetForm() {
-  if (!confirm('ヘルパー氏名以外の入力内容をリセットしますか？')) return;
+  if (!confirm('入力内容をリセットしますか？\n（ヘルパー氏名は保持されます）')) return;
 
   const savedName = document.getElementById('helperName').value; // 保持
 

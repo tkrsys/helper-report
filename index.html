@@ -1,0 +1,1043 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>ヘルパー活動報告書</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #f5f0e8;          /* 温かみのあるクリーム */
+    --card: #fffdf8;        /* ほんのり温かい白 */
+    --accent: #2563a8;      /* 落ち着いた深めの青 */
+    --ink: #2c2c2c;         /* 柔らかい黒 */
+    --sub: #5a5a5a;         /* 読みやすいグレー */
+    --border: #d8cfc0;      /* クリーム寄りのボーダー */
+    --check-on: #2e8b57;    /* 落ち着いたグリーン */
+    --danger: #c0392b;      /* 深めの赤 */
+    --radius: 14px;
+    --tap: 62px;            /* タップ領域を大きく */
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body { background: var(--bg); font-family: 'Noto Sans JP', -apple-system, sans-serif; color: var(--ink); min-height: 100vh; padding-bottom: 120px; font-size: 17px; }
+
+  .app-header {
+    background: var(--accent);
+    border-bottom: none;
+    padding: 16px 20px 13px;
+    padding-top: calc(16px + env(safe-area-inset-top, 0px));
+    position: sticky; top: 0; z-index: 100;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+  }
+  .app-header h1 { font-size: 20px; font-weight: 700; text-align: center; letter-spacing: 0.18em; color: #fff; }
+  .app-header .sub { font-size: 13px; color: rgba(255,255,255,0.8); text-align: center; margin-top: 3px; }
+  .nav-link {
+    display: flex; align-items: center; justify-content: flex-end;
+    padding: 0 4px 4px;
+  }
+  .nav-link a {
+    color: rgba(255,255,255,0.85); font-size: 13px; font-weight: 600;
+    text-decoration: none; display: flex; align-items: center; gap: 4px;
+    padding: 4px 10px; border-radius: 20px;
+    background: rgba(255,255,255,0.15);
+  }
+  .nav-link a:active { background: rgba(255,255,255,0.25); }
+
+  .scroll-body { padding: 16px 14px 24px; max-width: 500px; margin: 0 auto; }
+  .section-label {
+    font-size: 14px; font-weight: 700; color: var(--accent);
+    letter-spacing: 0.06em; margin: 26px 0 8px 4px;
+    padding-left: 10px;
+    border-left: 4px solid var(--accent);
+  }
+  .card { background: var(--card); border-radius: var(--radius); overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08); border: 1px solid var(--border); }
+
+  /* ── 年月（input[type=month]）＋ヘルパー氏名 1行カード ── */
+  .top-card {
+    background: var(--card); border-radius: var(--radius);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08); border: 1px solid var(--border);
+    display: flex; align-items: center;
+    min-height: var(--tap); padding: 0 18px; gap: 0;
+  }
+  .ym-block { display: flex; align-items: center; flex-shrink: 0; }
+  #ymPicker {
+    border: none; background: transparent; font-family: inherit;
+    font-size: 18px; font-weight: 700; color: var(--accent);
+    outline: none; cursor: pointer;
+    padding: 16px 0;
+    min-width: 128px;
+  }
+  #ymPicker::-webkit-calendar-picker-indicator { opacity: 0.6; cursor: pointer; width: 22px; height: 22px; }
+  .top-divider { width: 1px; height: 32px; background: var(--border); margin: 0 14px; flex-shrink: 0; }
+  .helper-block { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; }
+  .helper-block label { font-size: 14px; font-weight: 700; color: var(--sub); white-space: nowrap; }
+  .helper-block input {
+    flex: 1; border: none; background: transparent; font-family: inherit;
+    font-size: 17px; color: var(--ink); outline: none; min-width: 0;
+    text-align: right; padding: 16px 0;
+  }
+  .helper-block input::placeholder { color: #bbb; }
+  .helper-block input:focus { color: var(--accent); }
+
+  /* ── FIELD ROW ── */
+  .field-row { display: flex; align-items: center; min-height: var(--tap); padding: 0 18px; border-bottom: 1px solid var(--border); gap: 12px; }
+  .field-row:last-child { border-bottom: none; }
+  .field-label { font-size: 15px; font-weight: 700; color: var(--sub); white-space: nowrap; flex-shrink: 0; min-width: 82px; }
+  .field-input { flex: 1; border: none; background: transparent; font-family: inherit; font-size: 17px; color: var(--ink); outline: none; text-align: right; padding: 16px 0; min-width: 0; }
+  .field-input::placeholder { color: #bbb; }
+  .field-input:focus { color: var(--accent); }
+  select.field-input { -webkit-appearance: none; cursor: pointer; }
+
+  /* ── TIME ROW ── */
+  .time-row { display: flex; align-items: center; min-height: var(--tap); padding: 0 18px; border-bottom: 1px solid var(--border); gap: 10px; }
+  .time-row:last-child { border-bottom: none; }
+  .time-row .field-label { min-width: 82px; }
+  .time-row input[type="time"] { flex: 1; border: none; background: transparent; font-family: inherit; font-size: 17px; color: var(--ink); outline: none; text-align: right; padding: 16px 0; }
+  .time-now-btn {
+    flex-shrink: 0;
+    height: 38px; padding: 0 16px;
+    border-radius: 10px; border: none;
+    background: var(--accent); color: #fff;
+    font-family: inherit; font-size: 15px; font-weight: 700;
+    cursor: pointer; letter-spacing: 0.05em;
+    transition: opacity 0.15s, transform 0.1s;
+  }
+  .time-now-btn:active { opacity: 0.75; transform: scale(0.95); }
+
+  /* ── CHECKLIST ── */
+  .check-card { background: var(--card); border-radius: var(--radius); overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08); border: 1px solid var(--border); }
+  .check-hint { font-size: 14px; color: var(--sub); padding: 10px 18px; border-bottom: 1px solid var(--border); line-height: 1.6; background: #f9f5ee; }
+  .toggle-row { display: flex; align-items: center; min-height: 60px; padding: 13px 18px; border-bottom: 1px solid var(--border); gap: 16px; cursor: pointer; user-select: none; transition: background 0.1s; }
+  .toggle-row:last-child { border-bottom: none; }
+  .toggle-row:active { background: #f0ebe0; }
+  .toggle-row input[type="checkbox"] { position: absolute; opacity: 0; width: 0; height: 0; }
+  .toggle-icon { width: 34px; height: 34px; border-radius: 9px; border: 2px solid var(--border); background: #fff; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 700; color: white; transition: all 0.15s; }
+  .toggle-text { font-size: 16px; line-height: 1.5; color: var(--ink); flex: 1; }
+  .toggle-row.danger-item .toggle-icon { border-color: #e8a89e; }
+
+  /* ── NOTES (full width textarea) ── */
+  .textarea-card { background: var(--card); border-radius: var(--radius); overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08); border: 1px solid var(--border); }
+  .textarea-card textarea { width: 100%; border: none; background: transparent; font-family: inherit; font-size: 16px; color: var(--ink); padding: 16px 18px; outline: none; resize: none; min-height: 140px; line-height: 1.8; display: block; }
+  .textarea-card textarea::placeholder { color: #bbb; }
+
+  /* ── MONEY (full width, vertical) ── */
+  .money-deposit-row {
+    display: flex; align-items: center; min-height: var(--tap);
+    padding: 0 18px; border-bottom: 2px solid var(--accent); gap: 12px;
+    background: #eaf1fb;
+  }
+  .money-deposit-label { font-size: 16px; font-weight: 700; color: var(--accent); flex: 1; }
+  .money-card { background: var(--card); border-radius: var(--radius); overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08); border: 1px solid var(--border); }
+  .money-col-header { display: flex; background: #f0ebe0; padding: 9px 18px; border-bottom: 1px solid var(--border); }
+  .money-col-header span { font-size: 13px; font-weight: 700; color: var(--sub); }
+  .money-col-header span:last-child { margin-left: auto; }
+  .money-item-row { display: flex; align-items: center; min-height: var(--tap); padding: 0 18px; border-bottom: 1px solid var(--border); gap: 12px; }
+  .money-item-row:last-child { border-bottom: none; }
+  .money-item-desc { flex: 1; border: none; background: transparent; font-family: inherit; font-size: 16px; color: var(--ink); outline: none; padding: 16px 0; min-width: 0; }
+  .money-item-desc::placeholder { color: #bbb; }
+  .money-vsep { width: 1px; height: 26px; background: var(--border); flex-shrink: 0; }
+  .money-yen { font-size: 15px; color: var(--sub); flex-shrink: 0; }
+  .money-item-amt { width: 104px; border: none; background: transparent; font-family: inherit; font-size: 17px; color: var(--ink); outline: none; text-align: right; padding: 16px 0; flex-shrink: 0; }
+  .money-item-amt::placeholder { color: #bbb; }
+  .money-item-amt:focus { color: var(--accent); }
+  .money-total-row { display: flex; align-items: center; min-height: 52px; padding: 0 18px; border-bottom: 1px solid var(--border); background: #f0ebe0; gap: 12px; }
+  .money-total-row:last-child { border-bottom: none; }
+  .money-total-label { flex: 1; font-size: 15px; font-weight: 700; color: var(--sub); }
+  .money-total-val { font-size: 18px; font-weight: 700; color: var(--accent); }
+  .money-total-val.refund { color: var(--ink); }
+
+  /* 返金額入力行 */
+  .money-actual-row {
+    display: flex; align-items: center; min-height: var(--tap);
+    padding: 0 18px; border-bottom: 1px solid var(--border); gap: 12px;
+    background: var(--card);
+  }
+  .money-actual-label { flex: 1; font-size: 15px; font-weight: 700; color: var(--ink); }
+
+  /* 差額・理由セクション */
+  .money-diff-section { border-top: 2px solid var(--danger); }
+  .money-diff-row {
+    display: flex; align-items: center; min-height: 52px;
+    padding: 0 18px; border-bottom: 1px solid var(--border); gap: 12px;
+    background: #fdf0ee;
+  }
+  .money-diff-label { flex: 1; font-size: 15px; font-weight: 700; color: var(--danger); }
+  .money-diff-val { font-size: 18px; font-weight: 700; color: var(--danger); }
+  .money-reason-row { border-bottom: none; background: var(--card); }
+  .money-reason-label { font-size: 14px; font-weight: 700; color: var(--sub); padding: 12px 18px 4px; }
+  .money-reason-textarea {
+    width: 100%; border: none; background: transparent; font-family: inherit;
+    font-size: 16px; color: var(--ink); padding: 6px 18px 14px;
+    outline: none; resize: none; min-height: 80px; line-height: 1.7; display: block;
+  }
+  .money-reason-textarea::placeholder { color: #bbb; }
+  .money-diff-section.hidden { display: none; }
+
+  /* ── BOTTOM BAR ── */
+  .bottom-bar {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: rgba(245,240,232,0.97);
+    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+    border-top: 1px solid var(--border);
+    padding: 12px 16px;
+    padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+    display: flex; gap: 12px; z-index: 200;
+  }
+  .btn { flex: 1; height: 56px; border-radius: 14px; font-family: inherit; font-size: 18px; font-weight: 700; border: none; cursor: pointer; transition: opacity 0.15s, transform 0.1s; letter-spacing: 0.05em; }
+  .btn:active { opacity: 0.75; transform: scale(0.97); }
+  .btn-reset { background: #fff0ee; color: var(--danger); box-shadow: 0 2px 6px rgba(0,0,0,0.1); flex: 0 0 90px; font-size: 15px; border: 1px solid #e8c0bb; }
+  .btn-preview { background: var(--accent); color: #fff; box-shadow: 0 3px 10px rgba(37,99,168,0.35); }
+
+  /* ── MODAL ── */
+  .modal-overlay { display: none; position: fixed; inset: 0; z-index: 300; background: rgba(0,0,0,0.65); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); align-items: flex-end; justify-content: center; }
+  .modal-overlay.open { display: flex; }
+  .modal-sheet { background: #1c1c1e; width: 100%; max-width: 520px; border-radius: 20px 20px 0 0; height: 93vh; display: flex; flex-direction: column; animation: slideUp 0.3s cubic-bezier(0.32,0.72,0,1); }
+  @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+  .modal-handle { width: 40px; height: 5px; border-radius: 3px; background: rgba(255,255,255,0.22); margin: 10px auto 0; flex-shrink: 0; }
+  .modal-header { padding: 12px 16px 10px; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+  .modal-title { font-size: 15px; font-weight: 700; color: #fff; }
+  .modal-close { width: 30px; height: 30px; border-radius: 50%; background: rgba(255,255,255,0.15); border: none; cursor: pointer; font-size: 13px; color: #fff; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+  .canvas-scroll { flex: 1; overflow-y: scroll; overflow-x: hidden; -webkit-overflow-scrolling: touch; background: #3a3a3c; display: flex; flex-direction: column; align-items: center; padding: 16px 12px; }
+  #previewCanvas { display: block; width: 100%; max-width: 460px; border-radius: 3px; box-shadow: 0 6px 32px rgba(0,0,0,0.6); background: #fff; }
+  .loading-msg { color: rgba(255,255,255,0.6); font-size: 14px; text-align: center; padding: 80px 20px; }
+  .modal-footer { padding: 12px 16px; padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)); display: flex; gap: 10px; flex-shrink: 0; background: #1c1c1e; border-top: 1px solid rgba(255,255,255,0.08); }
+  .btn-close2 { height: 50px; padding: 0 16px; border-radius: 12px; background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.85); font-family: inherit; font-size: 15px; font-weight: 600; border: none; cursor: pointer; flex-shrink: 0; }
+  .btn-close2:active { opacity: 0.7; }
+  .btn-dl-modal { flex-shrink: 0; height: 50px; padding: 0 16px; border-radius: 12px; background: #34c759; color: #fff; font-family: inherit; font-size: 15px; font-weight: 700; border: none; cursor: pointer; white-space: nowrap; }
+  .btn-dl-modal:active { opacity: 0.8; }
+  .btn-share-full {
+    flex: 1; height: 50px; border-radius: 12px;
+    background: var(--accent); color: #fff;
+    font-family: inherit; font-size: 16px; font-weight: 700;
+    border: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    transition: opacity 0.15s, transform 0.1s;
+  }
+  .btn-share-full:active { opacity: 0.75; transform: scale(0.97); }
+</style>
+</head>
+<body>
+
+<div class="app-header">
+  <h1>ヘルパー活動報告書</h1>
+  <div class="sub">入力後「プレビュー」でPDF確認・保存</div>
+  <div class="nav-link">
+    <a href="search.html">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="22" y2="22"/></svg>
+      検索画面へ
+    </a>
+  </div>
+</div>
+
+<div class="scroll-body">
+
+  <!-- ── 基本情報：type=month ＋ ヘルパー氏名 1行 ── -->
+  <div class="section-label">基本情報</div>
+  <div class="top-card">
+    <div class="ym-block">
+      <input type="month" id="ymPicker">
+    </div>
+    <div class="top-divider"></div>
+    <div class="helper-block">
+      <label for="helperName">ヘルパー氏名</label>
+      <input type="text" id="helperName" placeholder="氏名を入力" autocomplete="name">
+    </div>
+  </div>
+
+  <!-- ── 活動情報 ── -->
+  <div class="section-label">活動情報</div>
+  <div class="card">
+    <div class="field-row">
+      <span class="field-label">利用者氏名</span>
+      <input class="field-input" type="text" id="userName" placeholder="氏名" autocomplete="off">
+    </div>
+    <div class="field-row">
+      <span class="field-label">活動日</span>
+      <select class="field-input" id="daySel" style="font-size:16px;font-weight:600;color:var(--accent);cursor:pointer;-webkit-appearance:none;"></select>
+      <span style="font-size:14px;color:var(--sub);flex-shrink:0;">日</span>
+      <span id="dowDisplay" style="font-size:14px;font-weight:700;min-width:24px;text-align:center;flex-shrink:0;"></span>
+    </div>
+    <div class="time-row">
+      <span class="field-label">開始時刻</span>
+      <input type="time" id="startTime" oninput="toggleNowBtn('startTime')">
+      <button class="time-now-btn" id="nowBtn-startTime" onclick="setNow('startTime')" type="button">今</button>
+    </div>
+    <div class="time-row">
+      <span class="field-label">終了時刻</span>
+      <input type="time" id="endTime" oninput="toggleNowBtn('endTime')">
+      <button class="time-now-btn" id="nowBtn-endTime" onclick="setNow('endTime')" type="button">今</button>
+    </div>
+    <div class="field-row">
+      <span class="field-label">種別</span>
+      <select class="field-input" id="categorySelect" style="cursor:pointer;">
+        <option value="個別支援型">１．個別支援型</option>
+        <option value="グループ支援型">２．グループ支援型</option>
+      </select>
+    </div>
+    <div class="field-row" style="border-bottom:none">
+      <span class="field-label">支援費区分</span>
+      <select class="field-input" id="supportType" style="cursor:pointer;">
+        <option>支援費派遣・同行</option>
+        <option>支援費派遣</option>
+        <option>同行</option>
+        <option>その他</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- ── ヘルパー活動チェック ── -->
+  <div class="section-label">ヘルパーの活動チェック</div>
+  <div class="check-card">
+    <div class="check-hint">あてはまる項目にチェックしてください</div>
+    <label class="toggle-row" id="row-c1"><input type="checkbox" id="c1"><div class="toggle-content"><div class="toggle-icon"></div><span class="toggle-text">ご本人の意向を確認した</span></div></label>
+    <label class="toggle-row" id="row-c2"><input type="checkbox" id="c2"><div class="toggle-content"><div class="toggle-icon"></div><span class="toggle-text">活動時間はご家族に了解と確認を得た</span></div></label>
+    <label class="toggle-row" id="row-c3"><input type="checkbox" id="c3"><div class="toggle-content"><div class="toggle-icon"></div><span class="toggle-text">活動報告をご家族にした</span></div></label>
+    <label class="toggle-row" id="row-c4"><input type="checkbox" id="c4"><div class="toggle-content"><div class="toggle-icon"></div><span class="toggle-text">ご本人から目を離したり見失いはなかった</span></div></label>
+    <label class="toggle-row" id="row-c5"><input type="checkbox" id="c5"><div class="toggle-content"><div class="toggle-icon"></div><span class="toggle-text">預かり金はご家族に正確に返した</span></div></label>
+    <label class="toggle-row" id="row-c6" style="border-bottom:none"><input type="checkbox" id="c6"><div class="toggle-content"><div class="toggle-icon"></div><span class="toggle-text">守秘義務は守られた</span></div></label>
+  </div>
+
+  <!-- ── ご利用者様の様子 ── -->
+  <div class="section-label">ご利用者様の様子</div>
+  <div class="check-card">
+    <div class="check-hint">あてはまる項目にチェックしてください</div>
+    <label class="toggle-row danger-item" id="row-s1"><input type="checkbox" id="s1"><div class="toggle-content"><div class="toggle-icon"></div><span class="toggle-text">叫び声を出された</span></div></label>
+    <label class="toggle-row danger-item" id="row-s2"><input type="checkbox" id="s2"><div class="toggle-content"><div class="toggle-icon"></div><span class="toggle-text">道中でトラブルがあった</span></div></label>
+    <label class="toggle-row danger-item" id="row-s3"><input type="checkbox" id="s3"><div class="toggle-content"><div class="toggle-icon"></div><span class="toggle-text">ケガをされた</span></div></label>
+    <label class="toggle-row danger-item" id="row-s4"><input type="checkbox" id="s4"><div class="toggle-content"><div class="toggle-icon"></div><span class="toggle-text">パニックがあった</span></div></label>
+    <label class="toggle-row danger-item" id="row-s5"><input type="checkbox" id="s5"><div class="toggle-content"><div class="toggle-icon"></div><span class="toggle-text">他傷・自傷行為があった</span></div></label>
+    <label class="toggle-row danger-item" id="row-s6" style="border-bottom:none"><input type="checkbox" id="s6"><div class="toggle-content"><div class="toggle-icon"></div><span class="toggle-text">トイレの失敗をされた</span></div></label>
+  </div>
+
+  <!-- ── 活動内容・特記事項（縦並び） ── -->
+  <div class="section-label">活動内容・特記事項</div>
+  <div class="textarea-card">
+    <textarea id="notes" placeholder="活動場所、移動手段、内容、特記事項などを入力してください"></textarea>
+  </div>
+
+  <!-- ── 預り金・使用額（縦並び・全幅） ── -->
+  <div class="section-label">預り金・使用額</div>
+  <div class="money-card">
+    <!-- 預り金入力 -->
+    <div class="money-deposit-row">
+      <span class="money-deposit-label">預り金</span>
+      <div class="money-vsep"></div>
+      <span class="money-yen">¥</span>
+      <input class="money-item-amt" type="number" id="depositAmt" min="0" placeholder="0" inputmode="numeric" oninput="recalculate()">
+    </div>
+    <!-- 摘要ヘッダー -->
+    <div class="money-col-header">
+      <span style="flex:1">摘要</span>
+      <span style="width:96px;text-align:right">使用額（¥）</span>
+    </div>
+    <div id="moneyRows"></div>
+    <div class="money-total-row">
+      <span class="money-total-label">使用総額</span>
+      <span class="money-total-val" id="totalUsedDisp">—</span>
+    </div>
+    <!-- 返金予定額（自動計算） -->
+    <div class="money-total-row">
+      <span class="money-total-label">返金予定額</span>
+      <span class="money-total-val refund" id="totalRefundDisp">—</span>
+    </div>
+    <!-- 返金額（手入力） -->
+    <div class="money-actual-row">
+      <span class="money-actual-label">返金額</span>
+      <div class="money-vsep"></div>
+      <span class="money-yen">¥</span>
+      <input class="money-item-amt" type="number" id="actualRefundAmt" min="0" placeholder="0" inputmode="numeric" oninput="recalculate()">
+    </div>
+    <!-- 差額・理由（差額がある場合のみ表示） -->
+    <div class="money-diff-section hidden" id="diffSection">
+      <div class="money-diff-row">
+        <span class="money-diff-label">差額</span>
+        <span class="money-diff-val" id="diffDisp">—</span>
+      </div>
+      <div class="money-reason-row">
+        <div class="money-reason-label">差額の理由</div>
+        <textarea class="money-reason-textarea" id="diffReason" placeholder="差額が生じた理由を記入してください"></textarea>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /scroll-body -->
+
+<div class="bottom-bar">
+  <button class="btn btn-reset" onclick="resetForm()">リセット</button>
+  <button class="btn btn-preview" onclick="openPreview()">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:5px;margin-bottom:1px"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="22" y2="22"/></svg>プレビュー
+  </button>
+</div>
+
+<!-- Preview Modal -->
+<div class="modal-overlay" id="previewModal">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <span class="modal-title">📄 帳票プレビュー</span>
+      <button class="modal-close" onclick="closePreview()">✕</button>
+    </div>
+    <div class="canvas-scroll" id="canvasScroll">
+      <div class="loading-msg" id="loadingMsg">帳票を生成中…</div>
+      <canvas id="previewCanvas" style="display:none"></canvas>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-close2" onclick="closePreview()">閉じる</button>
+      <button class="btn-dl-modal" onclick="downloadPDF()">⬇ PDF保存</button>
+      <button class="btn-share-full" onclick="sharePDF()">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v13"/><path d="M7 7l5-5 5 5"/><rect x="3" y="14" width="18" height="8" rx="2"/></svg>
+        ファイルを共有
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ════════════════════════════════════
+//  永続化ユーティリティ
+// ════════════════════════════════════
+const STORE_KEY = 'helperFormData';
+
+function saveAll() {
+  const data = {
+    ymPicker:       document.getElementById('ymPicker').value,
+    helperName:     document.getElementById('helperName').value,
+    userName:       document.getElementById('userName').value,
+    daySel:         document.getElementById('daySel').value,
+    startTime:      document.getElementById('startTime').value,
+    endTime:        document.getElementById('endTime').value,
+    categorySelect: document.getElementById('categorySelect').value,
+    supportType:    document.getElementById('supportType').value,
+    notes:          document.getElementById('notes').value,
+    depositAmt:     document.getElementById('depositAmt').value,
+    actualRefundAmt:document.getElementById('actualRefundAmt').value,
+    diffReason:     document.getElementById('diffReason').value,
+    moneyDesc:      descInputsArr.map(i => i.value),
+    moneyAmt:       amountInputs.map(i => i.value),
+    checks: ['c1','c2','c3','c4','c5','c6','s1','s2','s3','s4','s5','s6']
+              .reduce((o,id) => { o[id] = document.getElementById(id).checked; return o; }, {})
+  };
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(data)); } catch(e) {}
+}
+
+function loadAll() {
+  let data;
+  try { data = JSON.parse(localStorage.getItem(STORE_KEY)); } catch(e) {}
+  if (!data) return;
+
+  if (data.ymPicker)        document.getElementById('ymPicker').value        = data.ymPicker;
+  if (data.helperName)      document.getElementById('helperName').value      = data.helperName;
+  if (data.userName)        document.getElementById('userName').value        = data.userName;
+  if (data.daySel)          document.getElementById('daySel').value          = data.daySel;
+  if (data.startTime)       document.getElementById('startTime').value       = data.startTime;
+  if (data.endTime)         document.getElementById('endTime').value         = data.endTime;
+  if (data.categorySelect)  document.getElementById('categorySelect').value  = data.categorySelect;
+  if (data.supportType)     document.getElementById('supportType').value     = data.supportType;
+  if (data.notes)           document.getElementById('notes').value           = data.notes;
+  if (data.depositAmt)      document.getElementById('depositAmt').value      = data.depositAmt;
+  if (data.actualRefundAmt) document.getElementById('actualRefundAmt').value = data.actualRefundAmt;
+  if (data.diffReason)      document.getElementById('diffReason').value      = data.diffReason;
+  if (data.moneyDesc)  data.moneyDesc.forEach((v,i) => { if(descInputsArr[i]) descInputsArr[i].value = v; });
+  if (data.moneyAmt)   data.moneyAmt.forEach((v,i)  => { if(amountInputs[i])  amountInputs[i].value  = v; });
+  if (data.checks) {
+    Object.entries(data.checks).forEach(([id, val]) => {
+      const cb = document.getElementById(id);
+      if (cb) { cb.checked = val; const row = cb.closest('.toggle-row'); if(row) updateIcon(row, cb); }
+    });
+  }
+  updateDOW();
+  recalculate();
+}
+
+// 全input/select/textarea の変化を監視して自動保存
+// （checkboxはtoggleハンドラ内でsaveAllを呼ぶため除外）
+function bindAutoSave() {
+  document.querySelectorAll('input:not([type="checkbox"]), select, textarea').forEach(el => {
+    el.addEventListener('change', saveAll);
+    el.addEventListener('input',  saveAll);
+  });
+}
+
+// ── 年月ピッカー初期化 ──
+(function() {
+  const now = new Date();
+  const pad = n => String(n).padStart(2,'0');
+  const ymPicker = document.getElementById('ymPicker');
+  ymPicker.value = `${now.getFullYear()}-${pad(now.getMonth()+1)}`;
+  ymPicker.addEventListener('change', () => { updateDayOptions(); updateDOW(); saveAll(); });
+})();
+
+// ── 日セレクト初期化（デフォルト：当日） ──
+(function() {
+  const sel = document.getElementById('daySel');
+  const ph = document.createElement('option');
+  ph.value = ''; ph.textContent = '選択'; ph.disabled = true;
+  sel.appendChild(ph);
+  for (let d = 1; d <= 31; d++) {
+    const o = document.createElement('option'); o.value = d; o.textContent = d;
+    sel.appendChild(o);
+  }
+  sel.value = new Date().getDate();
+  sel.addEventListener('change', () => { updateDOW(); saveAll(); });
+  setTimeout(updateDOW, 0);
+})();
+
+// ── 現在時刻セット ──
+function setNow(id) {
+  const now = new Date();
+  const hh = String(now.getHours()).padStart(2,'0');
+  const mm = String(now.getMinutes()).padStart(2,'0');
+  document.getElementById(id).value = `${hh}:${mm}`;
+  toggleNowBtn(id);
+  saveAll();
+}
+
+// 値があるときはボタンを非表示、ないときは表示
+function toggleNowBtn(id) {
+  const val = document.getElementById(id).value;
+  const btn = document.getElementById(`nowBtn-${id}`);
+  if (!btn) return;
+  btn.style.display = val ? 'none' : '';
+}
+
+// 両方の時刻ボタンの表示状態を初期化
+function initNowBtns() {
+  ['startTime','endTime'].forEach(toggleNowBtn);
+}
+
+function updateDayOptions() {
+  const val = document.getElementById('ymPicker').value; // "2026-04"
+  if (!val) return;
+  const [y, m] = val.split('-').map(Number);
+  const maxDay = new Date(y, m, 0).getDate();
+  const sel = document.getElementById('daySel');
+  const cur = parseInt(sel.value) || 0;
+  while (sel.options.length > 1) sel.remove(1);
+  for (let d = 1; d <= maxDay; d++) {
+    const o = document.createElement('option'); o.value = d; o.textContent = d;
+    if (d === cur) o.selected = true;
+    sel.appendChild(o);
+  }
+}
+
+function updateDOW() {
+  const val = document.getElementById('ymPicker').value;
+  const d   = parseInt(document.getElementById('daySel').value);
+  const el  = document.getElementById('dowDisplay');
+  if (!val || !d) { el.textContent = ''; return; }
+  const [y, m] = val.split('-').map(Number);
+  const dt = new Date(y, m - 1, d);
+  const labels = ['日','月','火','水','木','金','土'];
+  const colors  = ['#ff3b30','#1c1c1e','#1c1c1e','#1c1c1e','#1c1c1e','#1c1c1e','#007aff'];
+  el.textContent = `（${labels[dt.getDay()]}）`;
+  el.style.color = colors[dt.getDay()];
+}
+
+// ── 種別デフォルト ──
+document.getElementById('categorySelect').value = '個別支援型';
+
+// ── 預り金行 (全幅・横一列) ──
+const moneyContainer = document.getElementById('moneyRows');
+const amountInputs = [], descInputsArr = [];
+for (let i = 0; i < 15; i++) {
+  const row = document.createElement('div');
+  row.className = 'money-item-row';
+
+  const di = document.createElement('input');
+  di.className = 'money-item-desc'; di.type = 'text'; di.placeholder = `摘要 ${i+1}`;
+
+  const vsep = document.createElement('div'); vsep.className = 'money-vsep';
+  const yen  = document.createElement('span'); yen.className = 'money-yen'; yen.textContent = '¥';
+
+  const ai = document.createElement('input');
+  ai.className = 'money-item-amt'; ai.type = 'number'; ai.min = '0';
+  ai.placeholder = '0'; ai.inputMode = 'numeric';
+  ai.addEventListener('input', recalculate);
+
+  row.append(di, vsep, yen, ai);
+  moneyContainer.appendChild(row);
+  amountInputs.push(ai);
+  descInputsArr.push(di);
+}
+
+// ── 保存済みデータを復元・自動保存開始（預り金行生成後に実行） ──
+loadAll();
+bindAutoSave();
+initNowBtns(); // 時刻ボタンの初期表示状態を設定
+
+function recalculate() {
+  const deposit = parseFloat(document.getElementById('depositAmt').value) || 0;
+  let used = 0;
+  amountInputs.forEach(i => used += parseFloat(i.value) || 0);
+  const planned = deposit - used;                // 返金予定額
+  const actual  = parseFloat(document.getElementById('actualRefundAmt').value);
+  const hasActual = !isNaN(actual) && document.getElementById('actualRefundAmt').value !== '';
+  const diff = hasActual ? actual - planned : 0; // 返金額 − 返金予定額
+
+  document.getElementById('totalUsedDisp').textContent   = used > 0    ? `¥ ${used.toLocaleString()}`    : '—';
+  document.getElementById('totalRefundDisp').textContent = deposit > 0 ? `¥ ${planned.toLocaleString()}` : '—';
+
+  // 差額セクション：返金額が入力されていて、かつ差額ゼロでない場合のみ表示
+  const diffSection = document.getElementById('diffSection');
+  if (hasActual && diff !== 0) {
+    diffSection.classList.remove('hidden');
+    const sign = diff > 0 ? '+' : '';
+    document.getElementById('diffDisp').textContent = `${sign}¥ ${diff.toLocaleString()}`;
+    document.getElementById('diffDisp').style.color = diff < 0 ? 'var(--danger)' : '#1a7a3c';
+  } else {
+    diffSection.classList.add('hidden');
+    document.getElementById('diffDisp').textContent = '—';
+  }
+}
+
+// ── Toggle チェックリスト ──
+// checkboxのchangeイベントで確実に反映（iOS Safari対応）
+document.querySelectorAll('.toggle-row').forEach(row => {
+  const cb = row.querySelector('input[type="checkbox"]');
+  if (!cb) return;
+  // changeイベントで確実に状態を反映
+  cb.addEventListener('change', () => {
+    updateIcon(row, cb);
+    saveAll();
+  });
+  // タップ時の視覚フィードバック（アクティブ状態）
+  row.addEventListener('touchstart', () => {
+    row.style.background = '#f0ebe0';
+  }, { passive: true });
+  row.addEventListener('touchend', () => {
+    setTimeout(() => { row.style.background = ''; }, 150);
+  }, { passive: true });
+});
+
+function updateIcon(row, cb) {
+  const icon = row.querySelector('.toggle-icon');
+  if (!icon) return;
+  const isDanger = row.classList.contains('danger-item');
+  if (cb.checked) {
+    icon.textContent = '✓';
+    icon.style.background  = isDanger ? 'var(--danger)' : 'var(--check-on)';
+    icon.style.borderColor = isDanger ? 'var(--danger)' : 'var(--check-on)';
+    icon.style.color       = '#fff';
+    icon.style.fontSize    = '17px';
+    icon.style.fontWeight  = '700';
+  } else {
+    icon.textContent       = '';
+    icon.style.background  = '#fff';
+    icon.style.borderColor = isDanger ? '#e8a89e' : 'var(--border)';
+    icon.style.color       = '';
+  }
+}
+
+// ── Collect ──
+function collectData() {
+  const ic  = id => document.getElementById(id).checked;
+  const val = document.getElementById('ymPicker').value || '';   // "2026-04"
+  const [year, month] = val ? val.split('-').map(Number) : [null, null];
+  const day = parseInt(document.getElementById('daySel').value) || null;
+  const dow = document.getElementById('dowDisplay').textContent.replace(/[（）]/g,'');
+
+  // 元号ラベル（PDF表示用）
+  let eraStr = year ? `${year}年` : '年月未選択';
+  if (year >= 2019) eraStr = `令和${year - 2018}年（${year}年）`;
+  else if (year >= 1989) eraStr = `平成${year - 1988}年（${year}年）`;
+
+  const deposit     = parseFloat(document.getElementById('depositAmt').value) || 0;
+  const totalUsed   = amountInputs.reduce((s,i) => s + (parseFloat(i.value)||0), 0);
+  const totalRefund = deposit - totalUsed;   // 返金予定額
+  const actualRefundRaw = document.getElementById('actualRefundAmt').value;
+  const actualRefund = actualRefundRaw !== '' ? parseFloat(actualRefundRaw) : null;
+  const diff = actualRefund !== null ? actualRefund - totalRefund : 0;
+  const diffReason = document.getElementById('diffReason').value;
+  return {
+    year, month, day, dow, eraStr,
+    deposit,
+    helperName:  document.getElementById('helperName').value,
+    userName:    document.getElementById('userName').value,
+    startTime:   document.getElementById('startTime').value,
+    endTime:     document.getElementById('endTime').value,
+    category:    document.getElementById('categorySelect').value,
+    supportType: document.getElementById('supportType').value,
+    notes:       document.getElementById('notes').value,
+    money: amountInputs.map((a,i) => ({ desc: descInputsArr[i].value, amount: a.value })),
+    totalUsed, totalRefund, actualRefund, diff, diffReason,
+    checks: { c1:ic('c1'),c2:ic('c2'),c3:ic('c3'),c4:ic('c4'),c5:ic('c5'),c6:ic('c6'),
+              s1:ic('s1'),s2:ic('s2'),s3:ic('s3'),s4:ic('s4'),s5:ic('s5'),s6:ic('s6') }
+  };
+}
+
+// ════════════════════════════════════
+//  Canvas 帳票描画 — A4 1ページ
+//  並び: 年月/ヘルパー→活動情報→チェック1→チェック2→60/40下部
+// ════════════════════════════════════
+function drawForm(data) {
+  var SC=2, PW=595, PH=842;
+  var canvas=document.getElementById('previewCanvas');
+  canvas.width=PW*SC; canvas.height=PH*SC;
+  var ctx=canvas.getContext('2d');
+  ctx.scale(SC,SC);
+
+  ctx.fillStyle='#fffdf8'; ctx.fillRect(0,0,PW,PH);
+  var ML=22,MR=22,CW=PW-ML-MR;
+  var RH=26, LBG='#eaf1fb', VBG='#fffdf8', LC='#2563a8', GAP=10;
+
+  function R(x,y,w,h,fill,stroke){
+    if(fill){ctx.fillStyle=fill;ctx.fillRect(x,y,w,h);}
+    ctx.strokeStyle=stroke||'#c0b8a8';ctx.lineWidth=0.7;ctx.strokeRect(x,y,w,h);
+  }
+  function T(str,x,y,opts){
+    if(str===null||str===undefined||str==='')return;
+    opts=opts||{};
+    ctx.fillStyle=opts.c||'#2c2c2c';
+    ctx.font=(opts.w||'normal')+' '+(opts.s||11)+'px "Noto Sans JP","Hiragino Sans",sans-serif';
+    ctx.textAlign=opts.a||'left';ctx.textBaseline='middle';
+    ctx.fillText(String(str),x,y);ctx.textAlign='left';
+  }
+  function chk(x,y,sz,checked,danger){
+    ctx.strokeStyle=checked?(danger?'#c0392b':'#2e8b57'):'#c0b8a8';
+    ctx.lineWidth=0.9;ctx.strokeRect(x,y,sz,sz);
+    if(checked){
+      ctx.strokeStyle=danger?'#c0392b':'#2e8b57';ctx.lineWidth=1.8;
+      ctx.lineCap='round';ctx.lineJoin='round';
+      ctx.beginPath();
+      ctx.moveTo(x+2,y+sz*0.54);ctx.lineTo(x+sz*0.40,y+sz-2);ctx.lineTo(x+sz-1.5,y+2);
+      ctx.stroke();ctx.lineCap='butt';
+    }
+  }
+  function sectionBar(label,y){
+    ctx.fillStyle=LC;ctx.fillRect(ML,y,4,16);
+    T(label,ML+10,y+8,{s:11,w:'bold',c:LC});
+    return y+22;
+  }
+  function wrapLines(text,maxW,fs){
+    ctx.font='normal '+fs+'px "Noto Sans JP","Hiragino Sans",sans-serif';
+    var lines=[],cur='';
+    for(var i=0;i<text.length;i++){
+      var ch=text[i];
+      if(ctx.measureText(cur+ch).width>maxW){lines.push(cur);cur=ch;}
+      else cur+=ch;
+    }
+    if(cur)lines.push(cur);
+    return lines;
+  }
+
+  /* ══ HEADER ══ */
+  ctx.fillStyle=LC;ctx.fillRect(0,0,PW,42);
+  T('ヘルパー活動報告書',PW/2,21,{s:17,w:'bold',c:'#fff',a:'center'});
+  T(data.eraStr+'　'+data.month+'月分',PW-ML,35,{s:9.5,c:'rgba(255,255,255,0.85)',a:'right'});
+
+  var cy=50;
+
+  /* ══ 1. 基本情報：年月（左半分）　ヘルパー氏名（右半分） ══ */
+  cy=sectionBar('基本情報',cy);
+  var half=Math.floor(CW/2);
+  var LW1=52,LW2=80;
+  R(ML,cy,LW1,RH,LBG);
+  T('年　月',ML+4,cy+RH/2,{s:9,w:'bold',c:LC});
+  R(ML+LW1,cy,half-LW1,RH,VBG);
+  T(data.eraStr+' '+data.month+'月',ML+LW1+6,cy+RH/2,{s:11,w:'bold'});
+  var hx=ML+half+4,hw=CW-half-4;
+  R(hx,cy,LW2,RH,LBG);
+  T('ヘルパー氏名',hx+4,cy+RH/2,{s:9,w:'bold',c:LC});
+  R(hx+LW2,cy,hw-LW2,RH,VBG);
+  T(data.helperName||'',hx+LW2+6,cy+RH/2,{s:11,w:'bold'});
+  cy+=RH+GAP;
+
+  /* ══ 2. 活動情報（ラベル行→値行） ══ */
+  cy=sectionBar('活動情報',cy);
+
+  var colD=68,colU=110,colC=82,colT=110,colS=CW-colD-colU-colC-colT;
+  // ラベル行
+  R(ML,                     cy,colD,RH,LBG);T('活 動 日',   ML+colD/2,                    cy+RH/2,{s:9,w:'bold',c:LC,a:'center'});
+  R(ML+colD,                cy,colU,RH,LBG);T('利用者氏名', ML+colD+colU/2,               cy+RH/2,{s:9,w:'bold',c:LC,a:'center'});
+  R(ML+colD+colU,           cy,colC,RH,LBG);T('種 別',      ML+colD+colU+colC/2,          cy+RH/2,{s:9,w:'bold',c:LC,a:'center'});
+  R(ML+colD+colU+colC,      cy,colT,RH,LBG);T('時 間 帯',   ML+colD+colU+colC+colT/2,     cy+RH/2,{s:9,w:'bold',c:LC,a:'center'});
+  R(ML+colD+colU+colC+colT, cy,colS,RH,LBG);T('支援費区分', ML+colD+colU+colC+colT+colS/2,cy+RH/2,{s:8.5,w:'bold',c:LC,a:'center'});
+  cy+=RH;
+  // 値行
+  var dateVal=data.day?(data.day+'日（'+data.dow+'）'):'';
+  var timeVal=(data.startTime||data.endTime)?((data.startTime||'--:--')+' ～ '+(data.endTime||'--:--')):'';
+  var userVal=data.userName?(data.userName+' 様'):'';
+  R(ML,                     cy,colD,RH,VBG);T(dateVal,          ML+colD/2,                    cy+RH/2,{s:11,w:'bold',a:'center'});
+  R(ML+colD,                cy,colU,RH,VBG);T(userVal,          ML+colD+colU/2,               cy+RH/2,{s:10,w:'bold',a:'center'});
+  R(ML+colD+colU,           cy,colC,RH,VBG);T(data.category||'',ML+colD+colU+colC/2,          cy+RH/2,{s:9.5,a:'center'});
+  R(ML+colD+colU+colC,      cy,colT,RH,VBG);T(timeVal,          ML+colD+colU+colC+colT/2,     cy+RH/2,{s:9.5,a:'center'});
+  R(ML+colD+colU+colC+colT, cy,colS,RH,VBG);T(data.supportType, ML+colD+colU+colC+colT+colS/2,cy+RH/2,{s:9,a:'center'});
+  cy+=RH+GAP;
+
+  /* ══ 3. ヘルパーの活動チェック ══ */
+  cy=sectionBar('ヘルパーの活動チェック',cy);
+  var CH=22,CW1c=CW/2;
+  var c1=[
+    {id:'c1',l:'ご本人の意向を確認した'},
+    {id:'c2',l:'活動時間はご家族に了解と確認を得た'},
+    {id:'c3',l:'活動報告をご家族にした'},
+    {id:'c4',l:'ご本人から目を離したり見失いはなかった'},
+    {id:'c5',l:'預かり金はご家族に正確に返した'},
+    {id:'c6',l:'守秘義務は守られた'},
+  ];
+  c1.forEach(function(c,i){
+    var col=i%2,row=Math.floor(i/2);
+    var cx=ML+col*CW1c,cy2=cy+row*CH;
+    R(cx,cy2,CW1c,CH,row%2===0?'#f5f0e8':VBG);
+    chk(cx+5,cy2+(CH-13)/2,13,data.checks[c.id],false);
+    T(c.l,cx+22,cy2+CH/2,{s:10,c:'#2c2c2c'});
+  });
+  cy+=Math.ceil(c1.length/2)*CH+GAP;
+
+  /* ══ 4. ご利用者様の様子 ══ */
+  cy=sectionBar('ご利用者様の様子',cy);
+  var CW2c=CW/3;
+  var c2=[
+    {id:'s1',l:'叫び声を出された'},
+    {id:'s2',l:'道中でトラブルがあった'},
+    {id:'s3',l:'ケガをされた'},
+    {id:'s4',l:'パニックがあった'},
+    {id:'s5',l:'他傷・自傷行為があった'},
+    {id:'s6',l:'トイレの失敗をされた'},
+  ];
+  c2.forEach(function(c,i){
+    var col=i%3,row=Math.floor(i/3);
+    var cx=ML+col*CW2c,cy2=cy+row*CH;
+    R(cx,cy2,CW2c,CH,row%2===0?'#fff5f4':VBG);
+    chk(cx+5,cy2+(CH-13)/2,13,data.checks[c.id],true);
+    T(c.l,cx+22,cy2+CH/2,{s:10,c:'#2c2c2c'});
+  });
+  cy+=Math.ceil(c2.length/3)*CH+GAP;
+
+  /* ══ 5. 活動内容・特記事項（60%左）| 預り金・使用額（40%右） ══ */
+  var FOOTER_H=16;
+  var notesW=Math.round(CW*0.50);
+  var moneyW=CW-notesW-6;
+  var MX=ML+notesW+6;
+  var bottomH=PH-cy-FOOTER_H-4;
+
+  // 見出し（左右同Y）
+  ctx.fillStyle=LC;
+  ctx.fillRect(ML,cy,4,16);T('活動内容・特記事項',ML+10,cy+8,{s:11,w:'bold',c:LC});
+  ctx.fillRect(MX,cy,4,16);T('預り金・使用額',MX+10,cy+8,{s:11,w:'bold',c:LC});
+  cy+=22;
+
+  var contH=bottomH-22;
+
+  /* 特記事項 */
+  R(ML,cy,notesW,contH,VBG);
+  if(data.notes){
+    ctx.save();
+    ctx.beginPath();ctx.rect(ML+4,cy+4,notesW-8,contH-8);ctx.clip();
+    var nfs=10.5,nlh=nfs+5;
+    var nl=wrapLines(data.notes,notesW-12,nfs);
+    ctx.fillStyle='#2c2c2c';ctx.textBaseline='top';
+    ctx.font='normal '+nfs+'px "Noto Sans JP","Hiragino Sans",sans-serif';
+    nl.slice(0,Math.floor((contH-10)/nlh)).forEach(function(ln,i){ctx.fillText(ln,ML+6,cy+6+i*nlh);});
+    ctx.restore();
+  }
+
+  /* 預り金カラム */
+  var mRH=20,dscW=Math.round(moneyW*0.50),amtW=moneyW-dscW;
+
+  function mRow(label,value,y,lbg,vbg,lc,vc,bold){
+    R(MX,y,dscW,mRH,lbg||LBG);
+    T(label,MX+dscW-4,y+mRH/2,{s:10,w:'bold',c:lc||'#5a5a5a',a:'right'});
+    R(MX+dscW,y,amtW,mRH,vbg||VBG);
+    if(value)T(value,MX+dscW+amtW-4,y+mRH/2,{s:bold?11.5:11,w:bold?'bold':'normal',c:vc||'#2c2c2c',a:'right'});
+    return y+mRH;
+  }
+
+  R(MX,cy,moneyW,mRH,'#deeaff');
+  T('預 り 金',MX+6,cy+mRH/2,{s:11,w:'bold',c:LC});
+  T(data.deposit>0?'¥'+data.deposit.toLocaleString():'',MX+moneyW-4,cy+mRH/2,{s:12,w:'bold',c:LC,a:'right'});
+  var mcy=cy+mRH;
+
+  var mHH=mRH-2; // ヘッダー行高
+  R(MX,    mcy,dscW,mHH,'#e0d8cc');T('摘　要',MX+dscW/2,    mcy+mHH/2,{s:9.5,w:'bold',c:'#5a5a5a',a:'center'});
+  R(MX+dscW,mcy,amtW,mHH,'#e0d8cc');T('使用額',MX+dscW+amtW/2,mcy+mHH/2,{s:9.5,w:'bold',c:'#5a5a5a',a:'center'});
+  mcy+=mHH;
+
+  var mDH=mRH-2; // データ行高
+  for(var i=0;i<15;i++){
+    var bg=i%2===0?VBG:'#f5f0e8';
+    R(MX,mcy,dscW,mDH,bg);
+    var desc=(data.money[i]&&data.money[i].desc)||'';
+    if(desc){
+      ctx.save();
+      ctx.font='10px sans-serif';ctx.fillStyle='#2c2c2c';ctx.textBaseline='middle';ctx.textAlign='left';
+      var fw=dscW-7,d2=desc;
+      while(d2.length>1&&ctx.measureText(d2).width>fw)d2=d2.slice(0,-1);
+      if(d2!==desc)d2+='…';
+      ctx.fillText(d2,MX+4,mcy+mDH/2);ctx.restore();
+    }
+    R(MX+dscW,mcy,amtW,mDH,bg);
+    var amt=(data.money[i]&&data.money[i].amount)?('¥'+Number(data.money[i].amount).toLocaleString()):'';
+    T(amt,MX+dscW+amtW-4,mcy+mDH/2,{s:10.5,a:'right'});
+    mcy+=mDH;
+  }
+
+  mcy=mRow('使用総額',  data.totalUsed>0?'¥'+data.totalUsed.toLocaleString():'',            mcy,'#e8eaf6','#e8eaf6','#444','#2563a8',true);
+  mcy=mRow('返金予定額',data.deposit>0?'¥'+data.totalRefund.toLocaleString():'',            mcy,'#e8f5ee','#e8f5ee','#444','#2e8b57',true);
+  mcy=mRow('返 金 額',  data.actualRefund!==null?'¥'+data.actualRefund.toLocaleString():'', mcy,'#f0f0f0','#f0f0f0','#444','#2c2c2c',true);
+
+  if(data.actualRefund!==null&&data.diff!==0){
+    var sign=data.diff>0?'+':'';
+    mcy=mRow('差　　額',sign+'¥'+data.diff.toLocaleString(),mcy,'#fff0ee','#fff0ee','#c0392b','#c0392b',true);
+    if(data.diffReason){
+      var rH=mRH*2;
+      R(MX,mcy,moneyW,rH,'#fff8f7');
+      ctx.save();
+      ctx.beginPath();ctx.rect(MX+3,mcy+3,moneyW-6,rH-6);ctx.clip();
+      var rl=wrapLines(data.diffReason,moneyW-10,8);
+      ctx.fillStyle='#666';ctx.textBaseline='top';
+      ctx.font='8px "Noto Sans JP","Hiragino Sans",sans-serif';
+      rl.slice(0,4).forEach(function(ln,i){ctx.fillText(ln,MX+4,mcy+4+i*10);});
+      ctx.restore();mcy+=rH;
+    }
+  }
+
+  /* フッター */
+  var footerY=PH-FOOTER_H;
+  ctx.strokeStyle='#d0c8b8';ctx.lineWidth=0.5;
+  ctx.beginPath();ctx.moveTo(ML,footerY);ctx.lineTo(PW-MR,footerY);ctx.stroke();
+  T('本報告書の内容を確認しました。',ML,footerY+8,{s:8.5,c:'#aaa'});
+  T(data.eraStr+' '+data.month+'月',PW-MR,footerY+8,{s:8.5,c:'#aaa',a:'right'});
+
+  return canvas;
+}
+
+// ── PDF Blob ──
+let lastPdfBlob = null;
+async function makePdfBlob() {
+  const { jsPDF } = window.jspdf;
+  const canvas = document.getElementById('previewCanvas');
+  const imgData = canvas.toDataURL('image/jpeg', 0.95);
+  const pdf = new jsPDF({ orientation:'portrait', unit:'pt', format:'a4' });
+  pdf.addImage(imgData, 'JPEG', 0, 0, 595, 842);
+  return pdf.output('blob');
+}
+
+// ── Modal ──
+async function openPreview() {
+  document.getElementById('previewModal').classList.add('open');
+  document.getElementById('loadingMsg').style.display = 'block';
+  document.getElementById('previewCanvas').style.display = 'none';
+  lastPdfBlob = null;
+  await new Promise(r => setTimeout(r, 60));
+  drawForm(collectData());
+  document.getElementById('loadingMsg').style.display = 'none';
+  document.getElementById('previewCanvas').style.display = 'block';
+  document.getElementById('canvasScroll').scrollTop = 0;
+  makePdfBlob().then(b => lastPdfBlob = b);
+}
+function closePreview() { document.getElementById('previewModal').classList.remove('open'); }
+async function downloadPDF() {
+  const d = collectData();
+  if (!lastPdfBlob) lastPdfBlob = await makePdfBlob();
+  const url = URL.createObjectURL(lastPdfBlob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `ヘルパー活動報告書_${d.eraStr}${d.month}月_${d.helperName||'report'}.pdf`;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
+}
+async function sharePDF() {
+  const d = collectData();
+
+  // ── Googleスプレッドシートにデータ保存 ──
+  const GAS_URL = 'https://script.google.com/macros/s/AKfycbx5pyNhnFp7G_MHhBqUhoMmBeVj38evzjTE8uPfUSR7CozdHlIogkUZG8zuUSd5UYrT/exec';
+  try {
+    const params = new URLSearchParams();
+    params.append('data', JSON.stringify(d));
+    fetch(GAS_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      body: params
+    });
+  } catch(e) {
+    console.warn('スプレッドシート保存エラー:', e);
+  }
+
+  // ── PDF生成・共有（従来処理） ──
+  if (!lastPdfBlob) lastPdfBlob = await makePdfBlob();
+  const fname = `ヘルパー活動報告書_${d.eraStr}${d.month}月_${d.helperName||'report'}.pdf`;
+  const file = new File([lastPdfBlob], fname, { type: 'application/pdf' });
+
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    try {
+      await navigator.share({
+        files: [file],
+        title: 'ヘルパー活動報告書',
+        text: `${d.eraStr} ${d.month}月分 ヘルパー活動報告書`
+      });
+    } catch (e) {
+      if (e.name !== 'AbortError') {
+        alert('共有に失敗しました。「PDF保存」でダウンロード後、送信してください。');
+      }
+    }
+  } else {
+    downloadPDF();
+  }
+}
+
+document.getElementById('previewModal').addEventListener('click', e => {
+  if (e.target === document.getElementById('previewModal')) closePreview();
+});
+
+// ── Reset ──
+function resetForm() {
+  if (!confirm('ヘルパー氏名以外の入力内容をリセットしますか？')) return;
+
+  const savedName = document.getElementById('helperName').value; // 保持
+
+  // テキスト・テキストエリア・数値をクリア（ヘルパー氏名除く）
+  ['userName','notes','depositAmt','actualRefundAmt','diffReason'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+
+  // 時刻クリア
+  ['startTime','endTime'].forEach(id => document.getElementById(id).value = '');
+  initNowBtns();
+
+  // 活動日：当日
+  const now = new Date();
+  document.getElementById('daySel').value = now.getDate();
+  updateDOW();
+
+  // 年月：今月
+  const pad = n => String(n).padStart(2,'0');
+  document.getElementById('ymPicker').value = `${now.getFullYear()}-${pad(now.getMonth()+1)}`;
+
+  // 種別：初期値（１．個別支援型）
+  document.getElementById('categorySelect').value = '個別支援型';
+
+  // 支援費区分：先頭
+  document.getElementById('supportType').selectedIndex = 0;
+
+  // 預り金摘要・金額クリア
+  amountInputs.forEach(i => i.value = '');
+  descInputsArr.forEach(i => i.value = '');
+
+  // 合計表示リセット
+  document.getElementById('totalUsedDisp').textContent  = '—';
+  document.getElementById('totalRefundDisp').textContent = '—';
+  document.getElementById('diffSection').classList.add('hidden');
+  recalculate();
+
+  // チェックボックス全解除
+  document.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+    cb.checked = false;
+    const row = cb.closest('.toggle-row');
+    if (row) updateIcon(row, cb);
+  });
+
+  // ヘルパー氏名を復元
+  document.getElementById('helperName').value = savedName;
+
+  // PDFキャッシュクリア（次回プレビュー時に再生成）
+  lastPdfBlob = null;
+
+  // 保存
+  saveAll();
+}
+</script>
+</body>
+</html>

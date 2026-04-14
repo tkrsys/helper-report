@@ -255,7 +255,8 @@
 (function() {
   'use strict';
 
-  var GAS_URL = 'https://script.google.com/macros/s/AKfycbyrma6RYOXmovNqEd_ZopsmGsuJGrHaclAOyhEnOP0ySCkUWFZ6nd6UXOSm5Z31Abqh/exec';
+  // Vercel APIエンドポイント（GASのURLはサーバー側で管理）
+  var API_URL = '/api/search';
   var _records = [];
 
   /* ── ユーティリティ ── */
@@ -364,8 +365,10 @@
     var params = new URLSearchParams();
     if (helper) params.append('helper', helper);
     if (user)   params.append('user',   user);
+    // セッションに保存済みのパスワードをサーバーに送る
+    params.append('password', sessionStorage.getItem('auth_pw') || '');
 
-    fetch(GAS_URL + '?' + params.toString())
+    fetch(API_URL + '?' + params.toString())
       .then(function(res) { return res.text(); })
       .then(function(text) {
         var records;
@@ -549,34 +552,51 @@
 </div><!-- /mainContent -->
 
 <script>
-// ── パスワード認証 ──
-// ※ パスワードをここで設定してください
-var CORRECT_PASSWORD = '1234'; // ← このパスワードを変更してください
-
+// ── パスワード認証（サーバー側で照合） ──
 var lockOverlay = document.getElementById('lockOverlay');
 var lockInput   = document.getElementById('lockInput');
 var lockBtn     = document.getElementById('lockBtn');
 var lockError   = document.getElementById('lockError');
 var mainContent = document.getElementById('mainContent');
 
-// セッション中はパスワード済みなら表示
+// セッション中は認証済みなら表示
 if (sessionStorage.getItem('auth') === 'ok') {
   lockOverlay.classList.add('hidden');
   mainContent.style.display = '';
 }
 
 function tryUnlock() {
-  if (lockInput.value === CORRECT_PASSWORD) {
-    sessionStorage.setItem('auth', 'ok');
-    lockOverlay.classList.add('hidden');
-    mainContent.style.display = '';
-    lockError.textContent = '';
-  } else {
-    lockError.textContent = 'パスワードが正しくありません';
-    lockInput.classList.add('error');
-    lockInput.value = '';
-    setTimeout(function() { lockInput.classList.remove('error'); }, 400);
-  }
+  var pw = lockInput.value;
+  if (!pw) return;
+
+  lockBtn.disabled = true;
+  lockBtn.textContent = '確認中…';
+  lockError.textContent = '';
+
+  // Vercel APIにパスワードを送って照合
+  fetch('/api/search?password=' + encodeURIComponent(pw))
+    .then(function(res) { return res.json(); })
+    .then(function(data) {
+      lockBtn.disabled = false;
+      lockBtn.textContent = '入力する';
+      if (data.error === 'unauthorized') {
+        lockError.textContent = 'パスワードが正しくありません';
+        lockInput.classList.add('error');
+        lockInput.value = '';
+        setTimeout(function() { lockInput.classList.remove('error'); }, 400);
+      } else {
+        // 認証成功：パスワードをセッションに保存
+        sessionStorage.setItem('auth', 'ok');
+        sessionStorage.setItem('auth_pw', pw);
+        lockOverlay.classList.add('hidden');
+        mainContent.style.display = '';
+      }
+    })
+    .catch(function() {
+      lockBtn.disabled = false;
+      lockBtn.textContent = '入力する';
+      lockError.textContent = '通信エラーが発生しました';
+    });
 }
 
 lockBtn.addEventListener('click', tryUnlock);
@@ -584,7 +604,6 @@ lockInput.addEventListener('keydown', function(e) {
   if (e.key === 'Enter') tryUnlock();
 });
 
-// 最初のフォーカス
 if (!sessionStorage.getItem('auth')) {
   setTimeout(function() { lockInput.focus(); }, 100);
 }

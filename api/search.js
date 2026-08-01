@@ -15,6 +15,11 @@ export default async function handler(req, res) {
     return res.status(401).json({ error: 'unauthorized' });
   }
 
+  // ログイン時の照合のみ（check=1）の場合はGASへ転送せずここで返す
+  if (req.query.check) {
+    return res.status(200).json({ ok: true });
+  }
+
   // GASにリクエストを転送
   const gasUrl = process.env.GAS_URL;
   const params = new URLSearchParams();

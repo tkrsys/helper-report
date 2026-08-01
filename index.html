@@ -239,8 +239,131 @@
   }
   .btn-share-full:active { opacity: 0.75; transform: scale(0.97); }
 </style>
+<!-- パスワード認証画面のCSS（検索画面と共通デザイン） -->
+<style>
+  .lock-overlay {
+    display: flex; position: fixed; inset: 0; z-index: 999;
+    background: var(--bg);
+    flex-direction: column; align-items: center; justify-content: center;
+    padding: 32px 24px;
+  }
+  .lock-overlay.hidden { display: none; }
+  .lock-box {
+    background: var(--card); border-radius: 20px;
+    border: 1px solid var(--border);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+    padding: 36px 28px; width: 100%; max-width: 340px;
+    text-align: center;
+  }
+  .lock-icon { font-size: 48px; margin-bottom: 16px; }
+  .lock-title { font-size: 20px; font-weight: 700; color: var(--ink); margin-bottom: 6px; }
+  .lock-sub { font-size: 14px; color: var(--sub); margin-bottom: 28px; }
+  .lock-input {
+    width: 100%; height: 52px; border-radius: 12px;
+    border: 2px solid var(--border); background: var(--bg);
+    font-family: inherit; font-size: 18px; font-weight: 700;
+    text-align: center; letter-spacing: 0.2em; color: var(--ink);
+    outline: none; margin-bottom: 14px;
+    transition: border-color 0.15s;
+  }
+  .lock-input:focus { border-color: var(--accent); }
+  .lock-input.error { border-color: var(--danger); animation: shake 0.3s; }
+  @keyframes shake {
+    0%,100% { transform: translateX(0); }
+    25% { transform: translateX(-8px); }
+    75% { transform: translateX(8px); }
+  }
+  .lock-btn {
+    width: 100%; height: 52px; border-radius: 12px;
+    background: var(--accent); color: #fff;
+    font-family: inherit; font-size: 17px; font-weight: 700;
+    border: none; cursor: pointer;
+    box-shadow: 0 3px 10px rgba(37,99,168,0.3);
+    transition: opacity 0.15s;
+  }
+  .lock-btn:active { opacity: 0.8; }
+  .lock-error { font-size: 13px; color: var(--danger); margin-top: 12px; min-height: 18px; font-weight: 600; }
+</style>
 </head>
 <body>
+
+<!-- ── パスワード認証画面（検索画面と同じ仕組み。どちらかでログインすれば12時間共通で有効） ── -->
+<div class="lock-overlay" id="lockOverlay">
+  <div class="lock-box">
+    <div class="lock-icon">🔒</div>
+    <div class="lock-title">アクセス認証</div>
+    <div class="lock-sub">パスワードを入力してください</div>
+    <input class="lock-input" type="password" id="lockInput" placeholder="••••••" maxlength="20">
+    <button class="lock-btn" id="lockBtn">入力する</button>
+    <div class="lock-error" id="lockError"></div>
+  </div>
+</div>
+<script>
+// ── パスワード認証（サーバー側で照合・認証状態は登録/検索共通でlocalStorageに12時間保持） ──
+var AUTH_KEY   = 'helperReportAuth';
+var AUTH_HOURS = 12;   // ログインの有効時間（時間）
+
+function getAuth() {
+  try {
+    var d = JSON.parse(localStorage.getItem(AUTH_KEY));
+    if (d && d.pw && (Date.now() - d.t) < AUTH_HOURS * 60 * 60 * 1000) return d;
+  } catch (e) {}
+  return null;
+}
+function setAuth(pw) {
+  try { localStorage.setItem(AUTH_KEY, JSON.stringify({ pw: pw, t: Date.now() })); } catch (e) {}
+}
+
+var lockOverlay = document.getElementById('lockOverlay');
+var lockInput   = document.getElementById('lockInput');
+var lockBtn     = document.getElementById('lockBtn');
+var lockError   = document.getElementById('lockError');
+
+function tryUnlock() {
+  var pw = lockInput.value;
+  if (!pw) return;
+
+  lockBtn.disabled = true;
+  lockBtn.textContent = '確認中…';
+  lockError.textContent = '';
+
+  // Vercel APIにパスワードを送って照合（check=1で照合のみ・データ取得はしない）
+  fetch('/api/search?check=1&password=' + encodeURIComponent(pw))
+    .then(function(res) { return res.json(); })
+    .then(function(data) {
+      lockBtn.disabled = false;
+      lockBtn.textContent = '入力する';
+      if (data.error === 'unauthorized') {
+        lockError.textContent = 'パスワードが正しくありません';
+        lockInput.classList.add('error');
+        lockInput.value = '';
+        setTimeout(function() { lockInput.classList.remove('error'); }, 400);
+      } else {
+        // 認証成功：登録・検索共通の認証状態を保存
+        setAuth(pw);
+        lockInput.value = '';
+        lockOverlay.classList.add('hidden');
+      }
+    })
+    .catch(function() {
+      lockBtn.disabled = false;
+      lockBtn.textContent = '入力する';
+      lockError.textContent = '通信エラーが発生しました';
+    });
+}
+
+lockBtn.addEventListener('click', tryUnlock);
+lockInput.addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') tryUnlock();
+});
+
+// ログイン済み（12時間以内）なら認証画面を出さない
+if (getAuth()) {
+  lockOverlay.classList.add('hidden');
+} else {
+  setTimeout(function() { lockInput.focus(); }, 100);
+}
+</script>
 
 <div class="app-header">
   <h1>ヘルパー活動報告書</h1>

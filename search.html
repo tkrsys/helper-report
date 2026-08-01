@@ -365,8 +365,8 @@
     var params = new URLSearchParams();
     if (helper) params.append('helper', helper);
     if (user)   params.append('user',   user);
-    // セッションに保存済みのパスワードをサーバーに送る
-    params.append('password', sessionStorage.getItem('auth_pw') || '');
+    // 保存済みの認証情報からパスワードをサーバーに送る（期限切れなら空になり401→再ログインへ）
+    params.append('password', (getAuth() || {}).pw || '');
 
     fetch(API_URL + '?' + params.toString())
       .then(function(res) { return res.text(); })
@@ -374,6 +374,12 @@
         var records;
         try { records = JSON.parse(text); } catch(e) {
           area.innerHTML = '<div class="state-msg"><span class="icon">⚠️</span>レスポンスのパースに失敗しました。<br><small>' + esc(text.slice(0,200)) + '</small></div>';
+          return;
+        }
+        if (records && records.error === 'unauthorized') {
+          // ログインの期限切れ・パスワード変更時は認証画面に戻す
+          area.innerHTML = '';
+          relock('ログインの有効期限が切れました。もう一度ログインしてください');
           return;
         }
         if (!Array.isArray(records)) {
@@ -552,17 +558,43 @@
 </div><!-- /mainContent -->
 
 <script>
-// ── パスワード認証（サーバー側で照合） ──
+// ── パスワード認証（サーバー側で照合・認証状態は登録/検索共通でlocalStorageに12時間保持） ──
+var AUTH_KEY   = 'helperReportAuth';
+var AUTH_HOURS = 12;   // ログインの有効時間（時間）
+
+function getAuth() {
+  try {
+    var d = JSON.parse(localStorage.getItem(AUTH_KEY));
+    if (d && d.pw && (Date.now() - d.t) < AUTH_HOURS * 60 * 60 * 1000) return d;
+  } catch (e) {}
+  return null;
+}
+function setAuth(pw) {
+  try { localStorage.setItem(AUTH_KEY, JSON.stringify({ pw: pw, t: Date.now() })); } catch (e) {}
+}
+function clearAuth() {
+  try { localStorage.removeItem(AUTH_KEY); } catch (e) {}
+}
+
 var lockOverlay = document.getElementById('lockOverlay');
 var lockInput   = document.getElementById('lockInput');
 var lockBtn     = document.getElementById('lockBtn');
 var lockError   = document.getElementById('lockError');
 var mainContent = document.getElementById('mainContent');
 
-// セッション中は認証済みなら表示
-if (sessionStorage.getItem('auth') === 'ok') {
+// ログイン済み（12時間以内）なら認証画面を出さない
+if (getAuth()) {
   lockOverlay.classList.add('hidden');
   mainContent.style.display = '';
+}
+
+// 期限切れなどで再ログインが必要になったときに認証画面へ戻す（検索処理からも呼ぶ）
+function relock(msg) {
+  clearAuth();
+  mainContent.style.display = 'none';
+  lockOverlay.classList.remove('hidden');
+  lockError.textContent = msg || '';
+  setTimeout(function() { lockInput.focus(); }, 100);
 }
 
 function tryUnlock() {
@@ -573,8 +605,8 @@ function tryUnlock() {
   lockBtn.textContent = '確認中…';
   lockError.textContent = '';
 
-  // Vercel APIにパスワードを送って照合
-  fetch('/api/search?password=' + encodeURIComponent(pw))
+  // Vercel APIにパスワードを送って照合（check=1で照合のみ・データ取得はしない）
+  fetch('/api/search?check=1&password=' + encodeURIComponent(pw))
     .then(function(res) { return res.json(); })
     .then(function(data) {
       lockBtn.disabled = false;
@@ -585,9 +617,9 @@ function tryUnlock() {
         lockInput.value = '';
         setTimeout(function() { lockInput.classList.remove('error'); }, 400);
       } else {
-        // 認証成功：パスワードをセッションに保存
-        sessionStorage.setItem('auth', 'ok');
-        sessionStorage.setItem('auth_pw', pw);
+        // 認証成功：登録・検索共通の認証状態を保存
+        setAuth(pw);
+        lockInput.value = '';
         lockOverlay.classList.add('hidden');
         mainContent.style.display = '';
       }
@@ -604,7 +636,7 @@ lockInput.addEventListener('keydown', function(e) {
   if (e.key === 'Enter') tryUnlock();
 });
 
-if (!sessionStorage.getItem('auth')) {
+if (!getAuth()) {
   setTimeout(function() { lockInput.focus(); }, 100);
 }
 </script>

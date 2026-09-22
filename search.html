@@ -197,7 +197,7 @@
 
 <div class="header">
   <h1>活動報告書 検索</h1>
-  <div class="sub">スプレッドシートのデータを検索します</div>
+  <div class="sub">登録済みの活動報告書を検索します</div>
   <div class="nav-link">
     <a href="index.html">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
@@ -255,7 +255,7 @@
 (function() {
   'use strict';
 
-  // Vercel APIエンドポイント（GASのURLはサーバー側で管理）
+  // Vercel APIエンドポイント（データベースはサーバー側で管理）
   var API_URL = '/api/search';
   var _records = [];
 
@@ -301,19 +301,6 @@
     }
     return s;
   }
-  function monthNum(str) {
-    if (!str) return null;
-    var parts = str.split('-').map(Number);
-    return parts[0] * 100 + parts[1];
-  }
-  function parseRecordMonth(ymStr) {
-    var s = String(ymStr || '');
-    var yMatch = s.match(/(\d{4})年/);
-    var mMatch = s.match(/(\d{1,2})月/);
-    if (!yMatch || !mMatch) return null;
-    return parseInt(yMatch[1]) * 100 + parseInt(mMatch[1]);
-  }
-
   /* ── クリアボタン ── */
   function bindClear(inputId, btnId) {
     var inp = document.getElementById(inputId);
@@ -362,9 +349,12 @@
 
     area.innerHTML = '<div class="loading-spinner"></div>';
 
+    // 検索条件はすべてサーバー側（SQL）で絞り込む
     var params = new URLSearchParams();
-    if (helper) params.append('helper', helper);
-    if (user)   params.append('user',   user);
+    if (helper)    params.append('helper', helper);
+    if (user)      params.append('user',   user);
+    if (monthFrom) params.append('from',   monthFrom);
+    if (monthTo)   params.append('to',     monthTo);
     // 保存済みの認証情報からパスワードをサーバーに送る（期限切れなら空になり401→再ログインへ）
     params.append('password', (getAuth() || {}).pw || '');
 
@@ -382,20 +372,13 @@
           relock('ログインの有効期限が切れました。もう一度ログインしてください');
           return;
         }
+        if (records && records.error) {
+          area.innerHTML = '<div class="state-msg"><span class="icon">⚠️</span>' + esc(records.error) + '</div>';
+          return;
+        }
         if (!Array.isArray(records)) {
           area.innerHTML = '<div class="state-msg"><span class="icon">⚠️</span>予期しないデータ形式です。<br><small>' + esc(JSON.stringify(records).slice(0,200)) + '</small></div>';
           return;
-        }
-        var fromNum = monthNum(monthFrom);
-        var toNum   = monthNum(monthTo);
-        if (fromNum || toNum) {
-          records = records.filter(function(r) {
-            var rm = parseRecordMonth(r['年月']);
-            if (!rm) return false;
-            if (fromNum && rm < fromNum) return false;
-            if (toNum   && rm > toNum)   return false;
-            return true;
-          });
         }
         renderResults(records);
       })

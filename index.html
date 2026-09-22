@@ -313,6 +313,9 @@ function getAuth() {
 function setAuth(pw) {
   try { localStorage.setItem(AUTH_KEY, JSON.stringify({ pw: pw, t: Date.now() })); } catch (e) {}
 }
+function clearAuth() {
+  try { localStorage.removeItem(AUTH_KEY); } catch (e) {}
+}
 
 var lockOverlay = document.getElementById('lockOverlay');
 var lockInput   = document.getElementById('lockInput');
@@ -356,6 +359,14 @@ lockBtn.addEventListener('click', tryUnlock);
 lockInput.addEventListener('keydown', function(e) {
   if (e.key === 'Enter') tryUnlock();
 });
+
+// 期限切れなどで再ログインが必要になったときに認証画面へ戻す（保存処理からも呼ぶ）
+function relock(msg) {
+  clearAuth();
+  lockOverlay.classList.remove('hidden');
+  lockError.textContent = msg || '';
+  setTimeout(function() { lockInput.focus(); }, 100);
+}
 
 // ログイン済み（12時間以内）なら認証画面を出さない
 if (getAuth()) {
@@ -1131,24 +1142,55 @@ async function downloadPDF() {
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
   setTimeout(() => URL.revokeObjectURL(url), 5000);
 }
+// ── データベース（Neon）に保存：/api/save 経由 ──
+// 同じ内容を続けて共有しても二重登録にならないよう、直前に保存した内容を覚えておく
+let lastSavedSignature = null;
+async function saveReport(d) {
+  const signature = JSON.stringify(d);
+  if (signature === lastSavedSignature) return { ok: true, skipped: true };
+
+  const auth = getAuth();
+  let res, json;
+  try {
+    res = await fetch('/api/save', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: (auth || {}).pw || '', data: d })
+    });
+    json = await res.json().catch(() => ({}));
+  } catch (e) {
+    return { ok: false, error: '通信エラーが発生しました' };
+  }
+  if (res.status === 401 || json.error === 'unauthorized') return { ok: false, unauthorized: true };
+  if (!res.ok || !json.ok) return { ok: false, error: json.error || '保存に失敗しました' };
+
+  lastSavedSignature = signature;
+  return { ok: true, id: json.id };
+}
+
 async function sharePDF() {
   const d = collectData();
 
-  // ── Googleスプレッドシートにデータ保存 ──
-  const GAS_URL = 'https://script.google.com/macros/s/AKfycbx5pyNhnFp7G_MHhBqUhoMmBeVj38evzjTE8uPfUSR7CozdHlIogkUZG8zuUSd5UYrT/exec';
-  try {
-    const params = new URLSearchParams();
-    params.append('data', JSON.stringify(d));
-    fetch(GAS_URL, {
-      method: 'POST',
-      mode: 'no-cors',
-      body: params
-    });
-  } catch(e) {
-    console.warn('スプレッドシート保存エラー:', e);
+  // ── データベースに保存（失敗時は共有せず中断） ──
+  const shareBtn = document.querySelector('.btn-share-full');
+  const origHtml = shareBtn.innerHTML;
+  shareBtn.disabled = true;
+  shareBtn.textContent = '保存中…';
+  const saved = await saveReport(d);
+  shareBtn.disabled = false;
+  shareBtn.innerHTML = origHtml;
+
+  if (!saved.ok) {
+    if (saved.unauthorized) {
+      closePreview();
+      relock('ログインの有効期限が切れました。もう一度ログインしてください');
+    } else {
+      alert('データの保存に失敗しました。通信状態を確認して、もう一度お試しください。\n（' + saved.error + '）');
+    }
+    return;
   }
 
-  // ── PDF生成・共有（従来処理） ──
+  // ── PDF生成・共有 ──
   if (!lastPdfBlob) lastPdfBlob = await makePdfBlob();
   const fname = `ヘルパー活動報告書_${d.eraStr}${d.month}月_${d.helperName||'report'}.pdf`;
   const file = new File([lastPdfBlob], fname, { type: 'application/pdf' });

@@ -1,0 +1,12 @@
+{
+  "name": "helper-report",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "db:init": "node --env-file-if-exists=.env.local scripts/init-db.js",
+    "db:migrate-gas": "node --env-file-if-exists=.env.local scripts/migrate-from-gas.js"
+  },
+  "dependencies": {
+    "@neondatabase/serverless": "^1.0.0"
+  }
+}

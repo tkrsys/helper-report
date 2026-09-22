@@ -34,8 +34,12 @@ CREATE TABLE IF NOT EXISTS helper_reports (
   actual_refund  INTEGER,                           -- 返金額（未入力は NULL）
   diff           INTEGER      NOT NULL DEFAULT 0,   -- 差額（返金額 − 返金予定額）
   diff_reason    TEXT,                              -- 差額の理由
-  created_at     TIMESTAMPTZ  NOT NULL DEFAULT now() -- 送信日時
+  created_at     TIMESTAMPTZ  NOT NULL DEFAULT now(), -- 送信日時
+  deleted_at     TIMESTAMPTZ                         -- 論理削除日時（NULL = 有効）
 );
+
+-- 既存テーブルへの列追加（作成済み環境向け）
+ALTER TABLE helper_reports ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ;
 
 CREATE INDEX IF NOT EXISTS helper_reports_ym_idx     ON helper_reports (report_year, report_month, report_day);
 CREATE INDEX IF NOT EXISTS helper_reports_helper_idx ON helper_reports (helper_name);

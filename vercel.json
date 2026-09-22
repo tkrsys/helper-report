@@ -1,6 +1,7 @@
 {
   "rewrites": [
     { "source": "/api/search", "destination": "/api/search.js" },
-    { "source": "/api/save",   "destination": "/api/save.js" }
+    { "source": "/api/save",   "destination": "/api/save.js" },
+    { "source": "/api/delete", "destination": "/api/delete.js" }
   ]
 }

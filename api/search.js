@@ -25,8 +25,8 @@ export default async function handler(req, res) {
     return res.status(200).json({ ok: true, role: 'user' });
   }
 
-  // 検索条件を組み立てる
-  const where = [];
+  // 検索条件を組み立てる（論理削除済みは常に除外）
+  const where = ['deleted_at IS NULL'];
   const params = [];
   if (helper) { params.push(`%${String(helper).trim()}%`); where.push(`helper_name ILIKE $${params.length}`); }
   if (user)   { params.push(`%${String(user).trim()}%`);   where.push(`user_name ILIKE $${params.length}`); }
@@ -36,8 +36,7 @@ export default async function handler(req, res) {
   if (toNum)   { params.push(toNum);   where.push(`(report_year * 100 + report_month) <= $${params.length}`); }
 
   const text =
-    `SELECT * FROM helper_reports` +
-    (where.length ? ` WHERE ${where.join(' AND ')}` : '') +
+    `SELECT * FROM helper_reports WHERE ${where.join(' AND ')}` +
     ` ORDER BY report_year DESC, report_month DESC, report_day DESC, created_at DESC` +
     ` LIMIT ${MAX_ROWS}`;
 
